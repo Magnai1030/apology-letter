@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apology Letter</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: one 8-bit anamorphic sculpture fixed in a night room; 21 chapters scroll past as dialog boxes, picture shifted to the free side.
+   Status bar on top, viewpoint mini-map bottom-left. Single night theme on purpose, locked to a 16-colour palette. */
+:root {
+  --night: #1d2b53;
+  --black: #000000;
+  --white: #fff1e8;
+  --grey: #c2c3c7;
+  --pink: #ff77a8;
+  --red: #ff004d;
+  --yellow: #ffec27;
+  --blue: #29adff;
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --read: "VT323", "Courier New", monospace;
+  color-scheme: dark;
+}
+html, body { background: var(--night); color: var(--white); }
+body { font-family: var(--read); font-size: 22px; line-height: 1.2; }
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+.no-webgl #scene { display: none; }
+.scan {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.14) 2px 4px);
+  box-shadow: inset 0 0 160px rgba(0,0,0,0.5);
+}
+
+.hud {
+  position: fixed; z-index: 5; top: 0; left: 0; right: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) clamp(16px, 4vw, 40px) 10px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 22px;
+  font-family: var(--pixel); font-size: 10px; line-height: 1.7; text-transform: uppercase; text-shadow: 2px 2px 0 var(--black);
+}
+.hud div { display: flex; flex-direction: column; min-width: 0; font-variant-numeric: tabular-nums; }
+.hud .k { color: var(--grey); }
+.hud .names { flex-direction: row; gap: 8px; align-items: center; }
+.hud .m { color: var(--blue); } .hud .a { color: var(--pink); } .hud .d { color: var(--yellow); }
+.snd {
+  all: unset; cursor: pointer; font-family: var(--pixel); font-size: 9px; color: var(--black); background: var(--white);
+  padding: 8px 10px; box-shadow: 3px 3px 0 var(--black);
+}
+.snd[aria-pressed="true"] { background: var(--yellow); }
+.snd:focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; }
+
+main { position: relative; z-index: 2; padding-inline: clamp(16px, 7vw, 120px); }
+.chapter { min-height: 140vh; display: flex; align-items: center; }
+.chapter:first-child, .chapter:last-child { min-height: 100vh; }
+.chapter.right { justify-content: flex-end; }
+.stack { display: flex; flex-direction: column; gap: 20px; max-width: 27rem; min-width: 0; }
+.title { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: clamp(1.6rem, 4.6vw, 3.1rem); line-height: 1.35; text-shadow: 4px 4px 0 var(--black); display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.4em; }
+.title .m { color: var(--blue); } .title .a { color: var(--pink); }
+.title svg { width: 0.9em; height: auto; shape-rendering: crispEdges; }
+.box {
+  position: relative; background: rgba(0, 0, 0, 0.84); padding: 18px 20px 24px;
+  border: 4px solid var(--white); box-shadow: 0 0 0 4px var(--black), 10px 10px 0 4px rgba(0,0,0,0.4);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.box::after { content: "▼"; position: absolute; right: 12px; bottom: 5px; font-family: var(--pixel); font-size: 9px; color: var(--yellow); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.eyebrow { margin: 0; font-family: var(--pixel); font-size: 9px; line-height: 1.7; color: var(--yellow); text-transform: uppercase; }
+h2 { margin: 0; font-family: var(--pixel); font-weight: 400; font-size: clamp(0.9rem, 1.8vw, 1.15rem); line-height: 1.6; color: var(--white); text-wrap: balance; }
+.box p.body { margin: 0; font-size: clamp(1.3rem, 1.8vw, 1.5rem); line-height: 1.2; color: var(--grey); }
+.box p.body b { color: var(--white); font-weight: 400; }
+.hint { margin: 0; font-family: var(--pixel); font-size: 9px; line-height: 1.8; color: var(--white); text-shadow: 2px 2px 0 var(--black); }
+.again {
+  all: unset; cursor: pointer; align-self: flex-start; margin-top: 4px;
+  font-family: var(--pixel); font-size: 10px; color: var(--black); background: var(--pink);
+  padding: 12px 14px; box-shadow: 0 0 0 4px var(--black), 6px 6px 0 4px var(--blue);
+}
+.again:hover { background: var(--yellow); }
+.again:focus-visible { outline: 3px solid var(--white); outline-offset: 6px; }
+
+.meter {
+  position: fixed; z-index: 4; left: clamp(16px, 3vw, 32px); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px;
+  background: var(--black); border: 3px solid var(--white); box-shadow: 0 0 0 3px var(--black);
+  font-family: var(--pixel); font-size: 9px; line-height: 1.8; text-transform: uppercase; font-variant-numeric: tabular-nums;
+}
+#map { width: 64px; height: 64px; image-rendering: pixelated; display: block; }
+.readout { display: flex; flex-direction: column; gap: 4px; min-width: 116px; }
+.readout .k { color: var(--grey); }
+.bar { height: 8px; background: var(--night); }
+.bar i { display: block; height: 100%; width: 0; background: var(--yellow); }
+
+@media (max-width: 720px) {
+  .hud { font-size: 8px; gap: 6px 14px; }
+  .hud .names { display: none; }
+  .chapter, .chapter.right { align-items: flex-end; justify-content: flex-start; }
+  .stack { padding-bottom: 110px; }
+  .meter { left: 16px; right: 16px; }
+  #map { width: 48px; height: 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .box::after { animation: none; } }
+</style>
+</head>
+<body>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="scan" aria-hidden="true"></div>
+
+<header class="hud" aria-label="Story status">
+  <div><span class="k">Stage</span><span class="v" id="h-stage">00/22</span></div>
+  <div class="names"><span class="m">Magnai</span><span class="a">Ari</span><span class="d">Moonie</span></div>
+  <button class="snd" id="snd" type="button" aria-pressed="false">♪ Sound off</button>
+</header>
+
+<main>
+  <section class="chapter">
+    <div class="stack">
+      <h1 class="title"><span class="m">MAGNAI</span><svg viewBox="0 0 7 6" aria-label="loves" role="img"><path fill="#ff004d" d="M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z"/></svg><span class="a">ARI</span></h1>
+      <div class="box">
+        <p class="eyebrow">An apology letter · For Ari, from Magnai</p>
+        <p class="body">About 18,000 pixels floating in the dark. From most angles they look like noise. Walk around them, and from <b>22 exact spots</b> they turn into our story.</p>
+      </div>
+      <p class="hint">▼ Scroll to walk<br>Move the cursor to nudge the view</p>
+    </div>
+  </section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 01 · Matched</p><h2>A cat and a dessert</h2>
+    <p class="body">We matched on Tinder. You loved cats, I loved dessert, and it turned out we both loved both.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 02 · First date</p><h2>A movie, then lunch</h2>
+    <p class="body">Our first real date: a good movie, then lunch together. I remember you more than the film.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 03 · Meet-up</p><h2>Meeting you at KFC</h2>
+    <p class="body">I came to KFC to meet you. A bucket of chicken, the two of us, and no hurry to leave.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 04 · The question</p><h2>Will you be my boyfriend?</h2>
+    <p class="body">You asked me to be your boyfriend. It was a long-awaited decision, and <b>saying yes was easy.</b></p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 05 · The hotel</p><h2>Our first night</h2>
+    <p class="body">Our first night together, in a hotel, with the moon in the window.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 06 · The countryside</p><h2>A train out of the city</h2>
+    <p class="body">We took the train to the countryside. Green hills going past the window, and a whole day just for us.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 07 · Saving up</p><h2>One coin at a time</h2>
+    <p class="body">We started saving together, coin by coin, for a trip to Southeast Asia.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 08 · New Year</p><h2>First greetings</h2>
+    <p class="body">New Year with the family, and our first greetings together. Fireworks outside, everyone we love inside.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 09 · Southeast Asia</p><h2>We made it</h2>
+    <p class="body">Sea, sun and palm trees, paid for with every coin we saved.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 10 · A plan</p><h2>Room for one more</h2>
+    <p class="body">We started planning for a child. Our plans started to have three people in them.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 11 · The test</p><h2>Two lines</h2>
+    <p class="body">Two lines on the test. <b>We were pregnant.</b></p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 12 · Birthday</p><h2>One knee</h2>
+    <p class="body">A birthday cake, candles, and a ring. I asked you to marry me. You said yes.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 13 · Ultrasound</p><h2>A heartbeat</h2>
+    <p class="body">The first scan. A tiny flicker on the screen, beating fast. Our baby's heartbeat.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 14 · Certificate</p><h2>Husband and wife</h2>
+    <p class="body">We signed the marriage certificate. Husband and wife, on paper and for real.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 15 · Keys</p><h2>An apartment of our own</h2>
+    <p class="body">We got the keys to our own apartment.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 16 · Moonie</p><h2>Our daughter is born</h2>
+    <p class="body">Moonie arrived. <b>Everything before her was the prologue.</b></p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 17 · Moving in</p><h2>Three of us</h2>
+    <p class="body">Boxes, stairs, and the three of us. We moved into our apartment.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 18 · The first shot</p><h2>Brave girl</h2>
+    <p class="body">Moonie's vaccination. She cried hard, and we held her until she stopped.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 19 · One year</p><h2>One candle</h2>
+    <p class="body">Moonie turned one. One candle, a lot of balloons, and the whole family around her.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 20 · Hard times</p><h2>But we are good</h2>
+    <p class="body">Money has been hard, and some months are harder than others. <b>But we are good.</b> We still have each other.</p>
+  </div></div></section>
+
+  <section class="chapter right"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 21 · A promise</p><h2>Trust me, my wife</h2>
+    <p class="body">I'm giving you my whole heart, Ari, and I'm not taking it back.</p>
+  </div></div></section>
+
+  <section class="chapter"><div class="stack"><div class="box">
+    <p class="eyebrow">Stage 22 · Tonight</p><h2>I miss you, my wife</h2>
+    <p class="body">You're in China, and you trusted me to look after Moonie. I was playing on the PC when I should have been with our daughter. <b>I was wrong, Ari, and I'm sorry.</b></p>
+    <p class="body">The computer is off now, and Moonie is right here next to me. My phone is in my hand, and I keep checking the screen. <b>Please text me.</b></p>
+    <p class="body">Every piece of this is still here. From where I stand, it still makes you.</p>
+    <button class="again" id="again" type="button">Walk our story again</button>
+  </div></div></section>
+</main>
+
+<aside class="meter" aria-label="Viewpoint position">
+  <canvas id="map" width="32" height="32"></canvas>
+  <div class="readout">
+    <span class="k">Aligned</span>
+    <span id="m-align">000%</span>
+    <div class="bar"><i id="m-bar"></i></div>
+  </div>
+</aside>
+
+<script type="importmap">
+{ "imports": { "three": "./three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const ease = f => f * f * (3 - 2 * f);
+const isNarrow = () => innerWidth < 720;
+
+/* ---------- palette (PICO-8) ---------- */
+const PAL = {
+  X: 0x000000, K: 0x1d2b53, P: 0x7e2553, D: 0x008751, N: 0xab5236, M: 0x5f574f, H: 0xc2c3c7, W: 0xfff1e8,
+  R: 0xff004d, O: 0xffa300, Y: 0xffec27, G: 0x00e436, B: 0x29adff, L: 0x83769c, E: 0xff77a8, S: 0xffccaa,
+};
+
+/* ---------- cast ---------- */
+const MAG = ['.XXX.', '.SSS.', '.SSS.', 'BBBBB', 'SBBBS', '.KKK.', '.K.K.', '.X.X.'];
+const ARI = ['.XXX.', 'XSSSX', 'XSSSX', 'XEEEX', 'SEEES', 'EEEEE', '.S.S.', '.X.X.'];
+const DAD = ['.HHH.', '.SSS.', '.SSS.', 'LLLLL', 'SLLLS', '.MMM.', '.M.M.', '.X.X.'];
+const MOM = ['.HHH.', 'HSSSH', 'HSSSH', 'HPPPH', 'SPPPS', 'PPPPP', '.S.S.', '.X.X.'];
+const KNEEL = ['.XXX..', '.SSS..', '.SSS..', 'BBBBSS', 'BBBB..', 'KKKKKK', 'X....X'];
+const BABY = ['..X..', '.SSS.', 'ESSSE', 'EEEEE', '.EEE.'];
+const TOD = ['.X.', 'SSS', 'EEE', 'EEE', 'S.S'];
+const H5 = ['RR.RR', 'RRRRR', 'RRRRR', '.RRR.', '..R..'];
+const H3 = ['R.R', 'RRR', '.R.'];
+const CAT = ['O.O...', 'OOO...', 'XOX..O', 'OOOOOO', 'O.O.O.'];
+const CAKE = ['.R..', 'WWWW', 'EEEE', 'NNNN'];
+const tint = (spr, from, to) => spr.map(r => r.split(from).join(to));
+
+/* ---------- detailed cast, drawn at twice the scene resolution ---------- */
+const MAG2 = [
+  '...XXXX...',
+  '..XXXXXX..',
+  '.XXXXXXXX.',
+  '.XSSSSSSX.',
+  '..SXSSXS..',
+  '..SSSSSS..',
+  '..SSNNSS..',
+  '...SSSS...',
+  '.BBBBBBBB.',
+  'BBBBBBBBBB',
+  'SBBBBBBBBS',
+  'S.BBBBBB.S',
+  '..KKKKKK..',
+  '..KK..KK..',
+  '..KK..KK..',
+  '.XXX..XXX.',
+];
+const ARI2 = [
+  '...XXXX...',
+  '..XXXXXX..',
+  '.XXXXXXXX.',
+  '.XXSSSSXX.',
+  '.XSXSSXSX.',
+  '.XSSSSSSX.',
+  '.XSESSESX.',
+  '.XXSRRSXX.',
+  '.XXEEEEXX.',
+  '.XEEEEEEX.',
+  'SEEEEEEEES',
+  'S.EEEEEE.S',
+  '.EEEEEEEE.',
+  'EEEEEEEEEE',
+  '...S..S...',
+  '..XX..XX..',
+];
+const DAD2 = [
+  '...HHHH...',
+  '..HHHHHH..',
+  '.HHSSSSHH.',
+  '.HSSSSSSH.',
+  '..SXSSXS..',
+  '..SSSSSS..',
+  '..SHHHHS..',
+  '...SSSS...',
+  '.LLLLLLLL.',
+  'LLLLLLLLLL',
+  'SLLLLLLLLS',
+  'S.LLLLLL.S',
+  '..MMMMMM..',
+  '..MM..MM..',
+  '..MM..MM..',
+  '.XXX..XXX.',
+];
+const MOM2 = [
+  '...HHHH...',
+  '..HHHHHH..',
+  '.HHHHHHHH.',
+  '.HHSSSSHH.',
+  '..SXSSXS..',
+  '..SSSSSS..',
+  '..SESSES..',
+  '...SRRS...',
+  '.PPPPPPPP.',
+  'PPPPPPPPPP',
+  'SPPPPPPPPS',
+  'S.PPPPPP.S',
+  '.PPPPPPPP.',
+  'PPPPPPPPPP',
+  '...S..S...',
+  '..XX..XX..',
+];
+const KNEEL2 = [
+  '...XXXX.....',
+  '..XXXXXX....',
+  '.XXXXXXXX...',
+  '.XSSSSSSX...',
+  '..SXSSXS....',
+  '..SSSSSS....',
+  '..SSNNSS....',
+  '...SSSS.....',
+  '.BBBBBBBBSSS',
+  'BBBBBBBBBSSS',
+  'BBBBBBBB....',
+  '.KKKKKKKKKK.',
+  '.KK.....KK..',
+  'XXX.....XXX.',
+];
+const BABY2 = [
+  '....XX....',
+  '...XXXX...',
+  '..SSSSSS..',
+  '.ESXSSXSE.',
+  '.ESSSSSSE.',
+  'EEESNNSEEE',
+  'EEEEEEEEEE',
+  'EEEWEEWEEE',
+  '.EEEEEEEE.',
+  '..EEEEEE..',
+];
+const TOD2 = [
+  '..XX..',
+  '.XXXX.',
+  '.SSSS.',
+  'SXSSXS',
+  '.SNNS.',
+  'EEEEEE',
+  'SEEEES',
+  'EEEEEE',
+  '.S..S.',
+  '.X..X.',
+];
+const H5_2 = [
+  '.RRR..RRR.',
+  'RRWRRRRRRR',
+  'RWRRRRRRRR',
+  'RRRRRRRRRR',
+  'RRRRRRRRRR',
+  '.RRRRRRRR.',
+  '..RRRRRR..',
+  '...RRRR...',
+  '....RR....',
+  '..........',
+];
+const H3_2 = ['RR..RR', 'RRRRRR', 'RWRRRR', '.RRRR.', '..RR..', '......'];
+const CAT2 = [
+  'O..O........',
+  'OOOO........',
+  'OOOO........',
+  'XOXO.......O',
+  'OOEO......O.',
+  'OOOOOOOOOOO.',
+  'OOOOOOOOOOO.',
+  'OOWWWWWOOOO.',
+  'O.O...O.O...',
+  'O.O...O.O...',
+];
+// low-res sprite -> hand-drawn version (by content, so tinted copies map too)
+const HI = new Map();
+const reg = (lo, hi) => HI.set(lo.join('/'), hi);
+[[MAG, MAG2], [ARI, ARI2], [DAD, DAD2], [MOM, MOM2], [KNEEL, KNEEL2], [BABY, BABY2], [TOD, TOD2], [H5, H5_2], [H3, H3_2], [CAT, CAT2]]
+  .forEach(([lo, hi]) => reg(lo, hi));
+reg(tint(H5, 'R', 'E'), tint(H5_2, 'R', 'E'));
+reg(['.XXX.', 'XSSSX', 'XEEEX'], ARI2.slice(2, 8)); // Ari's face in the stars
+
+// Scene layout stays on the small grid; the output is twice as fine:
+// props are upscaled with Scale2x (rounded, not blocky), people are stamped from the detailed cast,
+// draw order is kept, then everything gets a 1px black pixel-art outline.
+function scene(w, h, draw) {
+  return [0, 1].map(f => {
+    let order = 0;
+    const EMPTY = { c: '.', o: -1 };
+    const lo = Array.from({ length: h }, () => Array(w).fill(EMPTY));
+    const stamps = [];
+    const raw = (ch, x, y) => { if (y >= 0 && y < h && x >= 0 && x < w) lo[y][x] = { c: ch, o: order }; };
+    const set = (ch, x, y) => { order++; raw(ch, x, y); };
+    const rect = (ch, x, y, ww, hh) => { order++; for (let j = 0; j < hh; j++) for (let i = 0; i < ww; i++) raw(ch, x + i, y + j); };
+    const put = (spr, x, y) => {
+      order++;
+      const hi = HI.get(spr.join('/'));
+      if (hi) stamps.push({ spr: hi, x: x * 2, y: y * 2, o: order });
+      else spr.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') raw(ch, x + i, y + j); }));
+    };
+    draw({ set, rect, put }, f);
+
+    const W = w * 2, H = h * 2;
+    const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? EMPTY : lo[y][x];
+    const out = Array.from({ length: H }, () => Array(W));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const P = lo[y][x], A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1);
+      out[2 * y][2 * x] = (C.c === A.c && C.c !== D.c && A.c !== B.c) ? A : P;
+      out[2 * y][2 * x + 1] = (A.c === B.c && A.c !== C.c && B.c !== D.c) ? B : P;
+      out[2 * y + 1][2 * x] = (D.c === C.c && D.c !== B.c && C.c !== A.c) ? C : P;
+      out[2 * y + 1][2 * x + 1] = (B.c === D.c && B.c !== A.c && D.c !== C.c) ? D : P;
+    }
+    stamps.forEach(st => st.spr.forEach((r, j) => [...r].forEach((ch, i) => {
+      const X = st.x + i, Y = st.y + j;
+      if (ch !== '.' && X >= 0 && Y >= 0 && X < W && Y < H && out[Y][X].o < st.o) out[Y][X] = { c: ch, o: st.o };
+    })));
+
+    const g = out.map(r => r.map(c => c.c));
+    // outline only light shapes; dark hair and shoes already read as their own edge
+    const filled = (x, y) => x >= 0 && y >= 0 && x < W && y < H && g[y][x] !== '.' && g[y][x] !== 'X' && g[y][x] !== 'K';
+    return g.map((r, y) => r.map((c, x) =>
+      c === '.' && (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1)) ? 'X' : c).join(''));
+  });
+}
+function burst({ set }, x, y, c, big) {
+  set(c, x, y);
+  const d = big ? [[0, 1], [0, 2], [0, -1], [0, -2], [1, 0], [2, 0], [-1, 0], [-2, 0], [1, 1], [-1, -1], [1, -1], [-1, 1], [2, 2], [-2, -2], [2, -2], [-2, 2]] : [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  d.forEach(([dx, dy]) => set(c, x + dx, y + dy));
+}
+
+const STORY = [
+  // 1 matched: cat, phone, dessert
+  scene(27, 14, ({ set, rect, put }, f) => {
+    put(MAG, 0, 6); put(ARI, 22, 6); put(CAT, 5, 9); put(CAKE, 18, 10);
+    rect('H', 11, 1, 7, 10); rect('K', 12, 2, 5, 7); set('W', 14, 10);
+    put(f ? tint(H5, 'R', 'E') : H5, 12, 3);
+    if (f) { set('Y', 10, 0); set('Y', 19, 2); set('Y', 9, 5); set('Y', 20, 7); }
+    else { set('Y', 19, 0); set('Y', 9, 2); }
+  }),
+  // 2 movie date
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('H', 2, 0, 20, 8); rect('K', 3, 1, 18, 6);
+    if (f) put(H5, 10, 1);
+    else { set('W', 11, 2); rect('W', 11, 3, 2, 1); rect('W', 11, 4, 3, 1); rect('W', 11, 5, 2, 1); set('W', 11, 6); }
+    const back = (x, shirt, long) => { rect('X', x + 1, 9, 3, 2); if (long) { set('X', x, 10); set('X', x + 4, 10); } rect(shirt, x, 11, 5, 2); };
+    back(f ? 7 : 6, 'B', false); back(f ? 12 : 13, 'E', true);
+    rect('R', 3, 13, 18, 1);
+    put(['Y.Y', 'YYY', 'RWR', 'RWR'], 19, 9);
+  }),
+  // 3 KFC
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(MAG, 1, 4); put(ARI, 18, 4);
+    put(['.O..N.', 'OONOON', 'RWRWRW', 'RWRWRW', '.RWRW.', '.RWRW.'], 9, 5);
+    put(['.OO', 'OOO', 'W..'], 5, f ? 4 : 6);
+    rect('N', 0, 11, 24, 1); rect('N', 2, 12, 1, 2); rect('N', 21, 12, 1, 2);
+    put(H3, 11, f ? 0 : 1);
+  }),
+  // 4 she asks: a long-awaited question
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(f ? ['HHHHH', '.H.H.', '..Y..', '.YYY.', 'HHHHH'] : ['HHHHH', '.YYY.', '..Y..', '.H.H.', 'HHHHH'], 2, 0);
+    put(MAG, 2, 6); put(ARI, 17, 6);
+    rect('W', 9, 0, 11, 6); set('.', 9, 0); set('.', 19, 0); set('.', 9, 5); set('.', 19, 5); set('W', 16, 6);
+    if (f) put(H5, 12, 0);
+    else put(['.KKK.', 'K...K', '..KK.', '.....', '..K..'], 12, 0);
+    if (f) { set('Y', 1, 5); set('Y', 7, 5); set('Y', 8, 8); put(H3, 10, 9); }
+  }),
+  // 4 hotel night
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('H', 1, 0, 8, 6); rect('K', 2, 1, 6, 4);
+    set('Y', 6, 1); set('Y', 5, 2); set('Y', 5, 3); set('Y', 6, 4);
+    set('W', f ? 3 : 4, f ? 2 : 3);
+    rect('N', 3, 6, 2, 7);
+    rect('W', 5, 8, 10, 1);
+    rect('X', 6, 6, 3, 1); rect('S', 6, 7, 3, 1);
+    rect('X', 10, 6, 3, 1); set('X', 9, 7); set('X', 13, 7); rect('S', 10, 7, 3, 1);
+    rect('B', 5, 9, 18, 3); for (let x = 6; x < 22; x += 3) set('E', x, 10);
+    rect('N', 3, 12, 20, 1); rect('N', 22, 12, 1, 2);
+    put(H3, f ? 15 : 16, f ? 2 : 4);
+  }),
+  // 5 countryside train
+  scene(24, 14, ({ set, rect }, f) => {
+    rect('Y', 19, 1, 3, 3);
+    rect('G', 0, 9, 7, 2); rect('G', 2, 8, 3, 1); rect('G', 15, 9, 9, 2); rect('G', 17, 8, 4, 1);
+    rect('M', 0, 11, 24, 1); rect('D', 0, 12, 24, 2);
+    const o = f ? 1 : 0;
+    rect('R', 1 + o, 6, 9, 4); rect('W', 2 + o, 7, 7, 1);
+    set('X', 3 + o, 7); set('X', 6 + o, 7); set('X', 7 + o, 7);
+    rect('B', 11 + o, 5, 7, 5); rect('W', 12 + o, 6, 2, 2); rect('K', 16 + o, 3, 1, 2); set('Y', 18 + o, 8);
+    [2, 5, 8, 12, 15, 17].forEach(x => set('K', x + o, 10));
+    if (f) { rect('H', 16, 1, 2, 1); set('W', 15, 0); } else { rect('H', 16, 2, 2, 1); set('W', 18, 1); }
+  }),
+  // 6 saving for the trip
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(MAG, 0, 6); put(ARI, 19, 6);
+    put(['...EKKE..', '.EEEEEEEE', 'EXEEEEEEE', 'PPEEEEEEE', '.EEEEEEE.', '.E.E.E.E.'], 7, 8);
+    rect('Y', 11, f ? 5 : 3, 2, 2);
+    rect('Y', 17, 12, 2, 1); rect('Y', 17, 11, 2, 1); if (f) rect('Y', 17, 10, 2, 1);
+    put(['.W....', 'WWWWWW', '..W...'], f ? 16 : 14, 1);
+    set('H', f ? 14 : 12, 2); set('H', f ? 12 : 10, 3);
+  }),
+  // 7 New Year with family
+  scene(24, 14, (c, f) => {
+    c.put(DAD, 0, 6); c.put(MOM, 6, 6); c.put(MAG, 12, 6); c.put(ARI, 18, 6);
+    burst(c, 4, 2, 'Y', f); burst(c, 17, 2, 'R', !f); burst(c, 11, 1, 'B', f); burst(c, 22, 1, 'E', !f);
+  }),
+  // 8 Southeast Asia
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('O', 19, 1, 3, 3);
+    rect('B', 0, 10, 24, 2); for (let x = 0; x < 24; x += 4) set('W', (x + (f ? 2 : 0)) % 24, 10);
+    rect('Y', 0, 12, 24, 2);
+    [[4, 4], [4, 5], [3, 6], [3, 7], [3, 8], [2, 9], [2, 10], [2, 11]].forEach(([x, y]) => set('N', x, y));
+    put(f ? ['G.....G', '.GG.GG.', '..GGG..', '.G...G.'] : ['.G...G.', 'GGG.GGG', '..GGG..', '.G.G.G.'], 1, 1);
+    put(MAG, 9, 5); put(ARI, 15, 5);
+    put(['.W....', 'WWWWWW', '..W...'], f ? 10 : 8, 0);
+  }),
+  // 9 planning a child
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(MAG, 4, 6); put(ARI, 15, 6);
+    rect('W', 7, 0, 11, 5); set('.', 7, 0); set('.', 17, 0); set('.', 7, 4); set('.', 17, 4);
+    put(BABY, 10, 0);
+    set('W', 11, 5); if (f) { set('W', 10, 6); set('Y', 16, 1); set('Y', 8, 2); }
+  }),
+  // 10 two lines
+  scene(26, 14, ({ set, rect, put }, f) => {
+    put(MAG, 0, 6); put(ARI, 21, 6);
+    rect('W', 6, 6, 14, 3); rect('B', 6, 6, 4, 3); rect('H', 12, 6, 6, 3);
+    rect('R', 13, 6, 1, 3); if (f) rect('R', 16, 6, 1, 3);
+    if (f) { rect('Y', 2, 2, 1, 2); set('Y', 2, 5); rect('Y', 23, 2, 1, 2); set('Y', 23, 5); put(H3, 12, 1); }
+  }),
+  // 11 birthday and proposal
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(KNEEL, 4, 7); set('Y', 10, 9); if (f) { set('W', 11, 8); set('W', 9, 8); }
+    put(ARI, 13, 6);
+    rect('W', 18, 9, 6, 1); rect('E', 18, 10, 6, 2); rect('N', 18, 12, 6, 2);
+    rect('R', 19, 8, 1, 1); rect('B', 22, 8, 1, 1);
+    set(f ? 'Y' : 'O', 19, 7); set(f ? 'O' : 'Y', 22, 7);
+    put(H3, 10, f ? 2 : 3);
+  }),
+  // 12 ultrasound heartbeat
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('H', 3, 0, 18, 11); rect('X', 4, 1, 16, 8);
+    for (let j = 0; j < 6; j++) rect(j < 5 ? 'M' : 'L', 12 - j, 2 + j, 2 * j + 1, 1);
+    if (f) put(H5, 10, 3); else put(H3, 11, 4);
+    rect('G', 4, 8, 16, 1);
+    const sx = f ? 6 : 15; set('X', sx + 1, 8); set('G', sx, 7); set('G', sx + 1, 6); set('G', sx + 2, 7);
+    rect('H', 11, 11, 2, 2); rect('H', 8, 13, 8, 1);
+  }),
+  // 13 marriage certificate
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('W', 4, 0, 16, 11);
+    rect('H', 6, 2, 12, 1); rect('H', 6, 4, 12, 1); rect('H', 6, 6, 8, 1);
+    rect('B', 6, 9, 4, 1); rect('E', 13, 9, 4, 1);
+    put(f ? ['.RR.', 'RRRR', 'RRRR', '.RR.'] : ['.EE.', 'E..E', 'E..E', '.EE.'], 15, 4);
+    put(['.YY.', 'Y..Y', '.YY.'], 8, 11); put(['.YY.', 'Y..Y', '.YY.'], 10, 11);
+    if (f) { set('W', 7, 10); set('W', 15, 12); }
+  }),
+  // 14 keys to the apartment
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('L', 1, 1, 10, 13);
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) rect(((r * 3 + c + f) % 3 === 0) ? 'Y' : 'K', 2 + c * 3, 2 + r * 2, 2, 1);
+    rect('N', 5, 12, 2, 2);
+    put(['.YYY.......', 'Y...Y......', 'Y...YYYYYYY', 'Y...Y...Y.Y', '.YYY.......'], 13, f ? 5 : 6);
+    if (f) { set('W', 22, 3); set('W', 14, 3); set('W', 20, 11); }
+  }),
+  // 15 Moonie is born
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(['..YYY.', '.YY...', 'YY....', 'YY....', 'YY....', '.YY...', '..YYY.'], 9, 0);
+    (f ? [[3, 1], [17, 2], [21, 0], [6, 4]] : [[4, 0], [16, 1], [20, 3], [2, 3]]).forEach(([x, y]) => set('W', x, y));
+    put(BABY, 10, 8);
+    put(MAG, 2, 6); put(ARI, 17, 6);
+    put(H3, 5, f ? 2 : 3); put(H3, 16, f ? 3 : 2);
+  }),
+  // 16 moving in
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('L', 0, 1, 7, 13); rect('K', 2, 8, 3, 6); rect('K', 1, 3, 2, 2); rect('Y', 4, 3, 2, 2);
+    put(MAG, 9, 6); rect('N', 8, f ? 7 : 8, 4, 3); set('O', 9, f ? 8 : 9); set('O', 10, f ? 8 : 9);
+    put(ARI, 15, 6); put(['.S.', 'EEE'], 16, 9);
+    rect('N', 21, 11, 3, 3); set('O', 22, 12); if (f) { rect('N', 21, 8, 3, 3); set('O', 22, 9); }
+  }),
+  // 17 vaccination
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(MAG, 0, 6); put(ARI, 19, 6);
+    put(['...XXXX...', '..SSSSSS..', '.SSSSSSSS.', '.SXXSSXXS.', '.SSSSSSSS.', 'ESSSKKSSSE', '.SSSKKSSS.', '..SSSSSS..', '...SSSS...'], 7, 1);
+    if (f) { rect('K', 10, 6, 4, 1); }
+    set('B', 8, f ? 6 : 5); set('B', 15, f ? 6 : 5); set('B', 7, f ? 8 : 7); set('B', 16, f ? 8 : 7);
+    rect('E', 8, 10, 8, 3); set('O', 9, 11);
+    put(H3, 2, f ? 1 : 2);
+  }),
+  // 18 Moonie turns one
+  scene(24, 14, ({ set, rect, put }, f) => {
+    const up = f ? 1 : 0;
+    const balloon = (x, y, c) => { rect(c, x, y - up, 3, 3); set('H', x + 1, y + 3 - up); set('H', x + 1, y + 4 - up); };
+    balloon(2, 0, 'B'); balloon(19, 0, 'R'); balloon(9, 1, 'Y');
+    put(MAG, 1, 6); put(ARI, 18, 6);
+    put(TOD, 11, 6);
+    rect('W', 8, 10, 8, 1); rect('E', 8, 11, 8, 2); rect('N', 8, 13, 8, 1);
+    rect('W', 14, 8, 1, 2); set(f ? 'Y' : 'O', 14, 7);
+  }),
+  // 19 hard times, still good
+  scene(24, 14, ({ set, rect, put }, f) => {
+    rect('H', 6, 0, 12, 1); rect('M', 4, 1, 16, 2);
+    for (let x = 1; x < 24; x += 3) { const y0 = 3 + ((x + (f ? 1 : 0)) % 3); if (x < 3 || x > 20) { set('B', x, y0 + 4); set('B', x, y0 + 8); } else set('B', x, y0); }
+    rect('Y', 5, 4, 14, 1); rect('Y', 3, 5, 18, 1); rect('K', 12, 6, 1, 3);
+    put(MAG, 5, 6); put(TOD, 10, 9); put(ARI, 14, 6);
+    if (f) put(H3, 11, 1);
+  }),
+  // 20 trust me
+  scene(24, 14, ({ set, put }, f) => {
+    put(MAG, 3, 6); put(ARI, 16, 6);
+    set('S', 8, 10);
+    put(f ? H5 : tint(H5, 'R', 'E'), f ? 10 : 9, 4);
+    if (f) { set('W', 9, 3); set('W', 16, 3); set('Y', 15, 9); set('Y', 8, 5); }
+  }),
+  // 22 I miss you
+  scene(24, 14, ({ set, rect, put }, f) => {
+    put(['.YY', 'YY.', 'YY.', '.YY'], 1, 0);
+    const heart = ['.WW...WW.', 'W..W.W..W', 'W...W...W', 'W.......W', '.W.....W.', '..W...W..', '...W.W...', '....W....'];
+    put(f ? heart.map((r, j) => r.replace(/W/g, (m, i) => (i + j) % 2 ? 'Y' : 'W')) : heart, 13, 0);
+    put(['.XXX.', 'XSSSX', 'XEEEX'], 15, 2);
+    put(MAG, 3, 6); put(TOD, 0, 9); // Moonie, right next to her dad
+    // the PC, switched off
+    rect('M', 15, 9, 6, 4); rect('X', 16, 10, 4, 2); rect('M', 17, 13, 2, 1); set('N', 21, 13); set('N', 22, 12);
+    // phone in hand, waiting for her message
+    rect('H', 9, 9, 2, 3); rect(f ? 'B' : 'K', 9, 10, 2, 1); set('S', 8, 10);
+    if (f) put(['WWWWW', 'WKWKW', 'WWWWW'], 7, 5);
+    (f ? [[9, 2], [23, 7]] : [[10, 3], [23, 5], [8, 1]]).forEach(([x, y]) => set('W', x, y));
+  }),
+];
+const STOPS = 1 + STORY.length;
+const D = 44, PIX = 0.55;
+
+/* ---------- scroll → story position ---------- */
+const sections = [...document.querySelectorAll('.chapter')];
+let stops = [];
+function measure() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  stops = sections.map((el, i) => i === 0 ? 0 : i === STOPS - 1 ? max
+    : Math.min(max, el.offsetTop + el.offsetHeight / 2 - innerHeight / 2));
+}
+function scrollToS() {
+  const y = scrollY;
+  for (let i = 0; i < STOPS - 1; i++) if (y < stops[i + 1]) return i + clamp01((y - stops[i]) / Math.max(1, stops[i + 1] - stops[i]));
+  return STOPS - 1;
+}
+measure();
+addEventListener('load', measure);
+document.getElementById('again').addEventListener('click', () => scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }));
+
+/* ---------- chiptune (opt-in) ---------- */
+let actx = null;
+const sndBtn = document.getElementById('snd');
+const soundOn = () => sndBtn.getAttribute('aria-pressed') === 'true';
+sndBtn.addEventListener('click', () => {
+  const on = !soundOn();
+  sndBtn.setAttribute('aria-pressed', on);
+  sndBtn.textContent = on ? '♪ Sound on' : '♪ Sound off';
+  if (on && !actx) { try { actx = new AudioContext(); } catch (e) {} }
+  if (on) blip([523, 659, 784]);
+});
+function blip(freqs, step = 0.09) {
+  if (!actx || !soundOn()) return;
+  const t0 = actx.currentTime;
+  freqs.forEach((f, i) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.05, t0 + i * step);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + (i + 1) * step + 0.05);
+    o.connect(g).connect(actx.destination); o.start(t0 + i * step); o.stop(t0 + (i + 1) * step + 0.06);
+  });
+}
+const SCALE = [523, 587, 659, 784, 880, 1047, 1175, 1319];
+
+/* ---------- renderer: low-res buffer + 16-colour dither pass ---------- */
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('scene'), antialias: false }); }
+catch (e) { document.body.classList.add('no-webgl'); throw e; }
+renderer.setPixelRatio(1);
+const rt = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+const palVecs = Object.values(PAL).map(h => { const c = new THREE.Color().setHex(h, THREE.SRGBColorSpace); c.convertLinearToSRGB(); return new THREE.Vector3(c.r, c.g, c.b); });
+const postScene = new THREE.Scene();
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  uniforms: { tDiffuse: { value: rt.texture }, uPal: { value: palVecs }, uDither: { value: 0.05 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec3 uPal[16]; uniform float uDither; varying vec2 vUv;
+    float bayer2(vec2 a){ a = floor(a); return fract(dot(a, vec2(.5, a.y * .75))); }
+    float bayer4(vec2 a){ return bayer2(.5 * a) * .25 + bayer2(a); }
+    void main(){
+      vec3 c = pow(max(texture2D(tDiffuse, vUv).rgb, 0.), vec3(1. / 2.2));
+      c += (bayer4(gl_FragCoord.xy) - .5) * uDither;
+      vec3 best = uPal[0]; float bd = 1e9;
+      for (int i = 0; i < 16; i++) { vec3 d = (c - uPal[i]) * vec3(.9, 1.2, .7); float dd = dot(d, d); if (dd < bd) { bd = dd; best = uPal[i]; } }
+      gl_FragColor = vec4(best, 1.);
+    }`,
+})));
+const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+const scene3 = new THREE.Scene();
+const NIGHT = new THREE.Color(PAL.K);
+scene3.background = NIGHT;
+scene3.fog = new THREE.Fog(NIGHT, 80, 200);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 600);
+function resize() {
+  const px = 2;
+  const w = Math.ceil(innerWidth / px), h = Math.ceil(innerHeight / px);
+  renderer.setSize(w, h, false); rt.setSize(w, h);
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = camera.aspect < 0.8 ? 70 : 42; // a wider lens keeps the illusion; only moving breaks it
+  camera.updateProjectionMatrix();
+  measure();
+}
+resize();
+addEventListener('resize', resize);
+
+scene3.add(new THREE.AmbientLight(0xffffff, 0.5));
+const head = new THREE.DirectionalLight(0xffffff, 0.75); // rides with the viewer so the aligned faces read as flat pixels
+scene3.add(head, head.target);
+
+/* ---------- build the sculpture ---------- */
+const sph = (az, el, r) => {
+  const a = THREE.MathUtils.degToRad(az), e = THREE.MathUtils.degToRad(el);
+  return new THREE.Vector3(r * Math.cos(e) * Math.sin(a), r * Math.sin(e), r * Math.cos(e) * Math.cos(a));
+};
+let seed = 21;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// viewpoints climb a slow spiral around the sculpture as the years go by
+const VIEW = STORY.map((_, k) => ({ az: (k * 47) % 360, el: -6 + k * 2.4 }));
+const voxels = [];
+const probe = new THREE.PerspectiveCamera();
+STORY.forEach(([fa, fb], k) => {
+  const { az, el } = VIEW[k];
+  const V = sph(az, el, D);
+  probe.position.copy(V); probe.lookAt(0, 0, 0); probe.updateMatrixWorld();
+  const right = new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 0);
+  const up = new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 1);
+  const h = fa.length, w = fa[0].length;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const a = fa[y][x], b = fb[y][x];
+    const cells = a === b ? (a === '.' ? [] : [[a, 3]]) : [[a, 1], [b, 2]].filter(([c]) => c !== '.');
+    if (!cells.length) continue;
+    // same point on the picture plane, pushed a random distance along the viewer's line of sight
+    const P = right.clone().multiplyScalar((x - (w - 1) / 2) * PIX).addScaledVector(up, ((h - 1) / 2 - y) * PIX);
+    const t = 0.5 + rnd();
+    const pos = V.clone().lerp(P, t);
+    const axis = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(), ph = rnd() * 6.28;
+    cells.forEach(([ch, mask]) => voxels.push({ k: k + 1, pos, size: PIX * t * 1.0, quat: probe.quaternion.clone(), color: new THREE.Color(PAL[ch]), mask, axis, ph }));
+  }
+});
+
+const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ flatShading: true }), voxels.length);
+voxels.forEach((v, i) => mesh.setColorAt(i, v.color));
+const GROUPS = STORY.map(() => []);
+voxels.forEach((v, n) => GROUPS[v.k - 1].push(n));
+const lastW = new Float32Array(STORY.length).fill(-1);
+scene3.add(mesh);
+
+const grid = new THREE.GridHelper(360, 60, PAL.L, PAL.P);
+grid.position.y = -32; scene3.add(grid);
+{
+  const pos = [];
+  for (let i = 0; i < 600; i++) { const v = sph(rnd() * 360, 4 + rnd() * 80, 250 + rnd() * 60); pos.push(v.x, v.y, v.z); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  scene3.add(new THREE.Points(g, new THREE.PointsMaterial({ color: PAL.W, size: 1, sizeAttenuation: false, fog: false })));
+}
+
+/* ---------- choreography ---------- */
+const CAM = [{ az: -40, el: 28, r: 110 }, ...VIEW.map(v => ({ ...v, r: D }))];
+const SIDE = sections.map(el => el.classList.contains('right') ? -1 : 1);
+
+let mx = 0, my = 0, lagX = 0, lagY = 0;
+addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return;
+  mx = e.clientX / innerWidth * 2 - 1; my = e.clientY / innerHeight * 2 - 1;
+});
+
+const map = document.getElementById('map').getContext('2d');
+const stageEl = document.getElementById('h-stage'), alignEl = document.getElementById('m-align'), barEl = document.getElementById('m-bar');
+const hex = n => '#' + n.toString(16).padStart(6, '0');
+function drawMap(camAz, camR, k) {
+  map.fillStyle = hex(PAL.X); map.fillRect(0, 0, 32, 32);
+  map.fillStyle = hex(PAL.L); map.fillRect(15, 15, 2, 2);
+  VIEW.forEach((v, n) => {
+    const a = THREE.MathUtils.degToRad(v.az), r = 6 + n * 0.4;
+    map.fillStyle = n + 1 === k ? hex(PAL.Y) : n + 1 < k ? hex(PAL.E) : hex(PAL.P);
+    map.fillRect(Math.round(16 + Math.sin(a) * r), Math.round(16 + Math.cos(a) * r), 1, 1);
+  });
+  const a = THREE.MathUtils.degToRad(camAz), r = Math.min(15, camR / 7);
+  map.fillStyle = hex(PAL.B);
+  map.fillRect(Math.round(16 + Math.sin(a) * r) - 1, Math.round(16 + Math.cos(a) * r) - 1, 2, 2);
+}
+
+/* ---------- loop ---------- */
+const clock = new THREE.Clock();
+let s = scrollToS(), lastK = -1, shown = '';
+const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), tq = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+const rightV = new THREE.Vector3(), upV = new THREE.Vector3();
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  const T8 = Math.floor(t * 8) / 8;                     // tumbling runs at 8 fps
+  const F = reduced ? 1 : Math.floor(t * 2.5) % 2;       // pictures flip between two frames
+  const target = scrollToS();
+  s = reduced ? target : s + (target - s) * (1 - Math.exp(-dt * 3));
+  const i = Math.min(STOPS - 2, Math.floor(s)), f = clamp01(s - i);
+  const fe = lerp(f, ease(f), 0.8);
+
+  const a = CAM[i], b = CAM[i + 1];
+  let dAz = b.az - a.az; if (dAz > 180) dAz -= 360; if (dAz < -180) dAz += 360;
+  const az = a.az + dAz * fe, el = lerp(a.el, b.el, fe);
+  const r = lerp(a.r, b.r, fe) + Math.sin(Math.PI * fe) * 14;
+  camera.position.copy(sph(az, el, r));
+  lagX = lerp(lagX, mx, 1 - Math.exp(-dt * 2.2)); lagY = lerp(lagY, my, 1 - Math.exp(-dt * 2.2));
+  if (!reduced) {
+    rightV.setFromMatrixColumn(camera.matrixWorld, 0); upV.setFromMatrixColumn(camera.matrixWorld, 1);
+    camera.position.addScaledVector(rightV, (mx - lagX) * 6).addScaledVector(upV, -(my - lagY) * 4);
+  }
+  camera.lookAt(0, 0, 0);
+  if (isNarrow()) camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.18, innerWidth, innerHeight);
+  else camera.setViewOffset(innerWidth, innerHeight, -lerp(SIDE[i], SIDE[i + 1], ease(f)) * innerWidth * 0.2, 0, innerWidth, innerHeight);
+  head.position.copy(camera.position);
+
+  const intro = clamp01(1 - s * 1.4);
+  GROUPS.forEach((ids, g) => {
+    const w = ease(Math.max(clamp01(1 - Math.abs(s - (g + 1)) * 1.15), intro * 0.85));
+    if (w === 0 && lastW[g] === 0) return; // resting specks don't need new matrices
+    lastW[g] = w;
+    const loose = 1 - w;
+    for (const n of ids) {
+    const v = voxels[n];
+    p.copy(v.pos).addScaledVector(v.axis, reduced ? 0 : Math.sin(T8 * 0.7 + v.ph) * loose * 1.6);
+    tq.setFromAxisAngle(v.axis, loose * (reduced ? 1 : T8 * 0.6 + v.ph));
+    q.copy(v.quat).multiply(tq);
+    const onFrame = v.mask & (1 << F) ? 1 : 0;
+    const show = v.mask === 3 ? 1 : lerp(v.mask === 1 ? 1 : 0, onFrame, w); // two-frame pixels only swap once aligned
+    sc.setScalar(v.size * lerp(0.06, 1, w) * show);
+    mesh.setMatrixAt(n, m4.compose(p, q, sc));
+    }
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+
+  const k = Math.round(s);
+  const nudge = Math.hypot(mx - lagX, my - lagY);
+  const align = k === 0 ? 0 : Math.round(clamp01(1 - Math.abs(s - k) * 5 - nudge * 3) * 100);
+  const txt = k + '|' + align;
+  if (txt !== shown) {
+    shown = txt;
+    stageEl.textContent = String(k).padStart(2, '0') + '/' + STORY.length;
+    alignEl.textContent = String(align).padStart(3, '0') + '%';
+    barEl.style.width = align + '%';
+  }
+  if (k !== lastK) { if (lastK >= 0 && k > 0) blip(k === STORY.length ? [523, 659, 784, 1047, 784, 1047] : [SCALE[k % 8], SCALE[(k + 2) % 8]]); lastK = k; }
+  drawMap(az, r, k);
+
+  renderer.setRenderTarget(rt); renderer.render(scene3, camera);
+  renderer.setRenderTarget(null); renderer.render(postScene, postCam);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
